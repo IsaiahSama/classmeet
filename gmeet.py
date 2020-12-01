@@ -1,4 +1,5 @@
 from selenium import webdriver
+import selenium
 import pyautogui, time, os, json, re
 
 # try:
@@ -23,7 +24,11 @@ class Gmeetclass:
         try:
             self.driver = webdriver.Chrome("gmeetclass/chromedriver.exe")
             print("Driver Connected")
-        except:
+        except selenium.common.exceptions.WebDriverException:
+            print("Could not find chromedriver.exe. Makesure it is in the gmeetclass folder")
+            input(": ")
+            raise SystemExit
+        else:
             print("Your browser needs to be updated.")
             input(": ")
             raise SystemExit
@@ -87,35 +92,24 @@ class Gmeetclass:
         mic = self.driver.find_element_by_class_name("U26fgb JRY2Pb mUbCce kpROve uJNmj HNeRed QmxbVb")
         join = self.driver.find_element_by_class_name("l4V7wb Fxmcue")
         if not camera or not mic or not join: return "strange_error"
-        camera.click()
-        mic.click()
-        time.sleep(1)
-        join.click()
+        camera.click(); mic.click(); time.sleep(1); join.click()
         return True
 
     def screen_check(self, current_class):
-        # Checks if someone is presenting 
         if self.driver.find_element_by_class_name("z1gyye bGuvKd") or self.driver.find_element_by_class_name("TBMuR bj4p3b"):
             if not os.path.exists(f"gmeetclass/screenshots/{current_class}"):os.mkdir(f"gmeetclass/screenshots/{current_class}")
-            # Searches the screenshots folder of the current class for all images
             screenshots = [screenshot for screenshot in os.listdir(f"gmeetclass/screenshots/{current_class}") if screenshot.endswith(".png") and screenshot.startswith(current_class)]
             if screenshots:
-                # Calles the get_last Function. All images will be saved with a number at the end of the subject's name
                 highest = self.get_last(screenshots) + 1
             else:
-                # If no other screenshots with the same name as current subject exists, sets highest to 1 and names the new screenshot that.
                 highest = 1
-            pyautogui.screenshot(imageFilename=f"screenshots/{current_class}/{current_class}{highest}.png")
+            self.driver.save_screenshot(f"screenshots/{current_class}/{current_class}{highest}.png")
             print("Screenshot taken")  
 
     def get_last(self, itera):
-        # An empty list of numbers
         numbers = []
         for img in itera:
-            # Loops through the list of images in the screenshots folder looking for the numbers.
-            # In the format "physics32.png", splits name by the . and returns the 0 index, which in this case is "physics32"
             numbers.append(int(re.findall(r"([0-9]+)", img.split(".")[0])[-1]))
-        # Sorts the numbers then sends the highest one.
         return sorted(numbers)[-1]
 
     def get_minutes(self, value):
