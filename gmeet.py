@@ -1,5 +1,5 @@
 from selenium import webdriver
-import pyautogui, time, os, json, re, time
+import pyautogui, time, os, json, re
 
 # try:
 #     driver = webdriver.Chrome("gmeetclass/chromedriver.exe")
@@ -7,22 +7,132 @@ import pyautogui, time, os, json, re, time
 #     print("Your browser needs to be updated.")
 #     input(": ")
 #     raise SystemExit
+# Login Page: https://accounts.google.com/signin/v2/identifier?service=classroom&passive=1209600&continue=https%3A%2F%2Fclassroom.google.com%2Fu%2F0%2Fh&followup=https%3A%2F%2Fclassroom.google.com%2Fu%2F0%2Fh&flowName=GlifWebSignIn&flowEntry=ServiceLogin
+
 
 def clr(): os.system("CLS")
 
+
 class Gmeetclass:
-    def __init__(self):
-        pass
+    def __init__(self, user_dict, driver=None, time_table=None):
+        self.user_dict = user_dict
+        self.driver = driver
+        self.time_table = time_table
+
+    def setup(self):
+        try:
+            self.driver = webdriver.Chrome("gmeetclass/chromedriver.exe")
+            print("Driver Connected")
+        except:
+            print("Your browser needs to be updated.")
+            input(": ")
+            raise SystemExit
+        clr()
+    
+    def login(self):
+        self.driver.get("https://accounts.google.com/signin/v2/identifier?service=classroom&passive=1209600&continue=https%3A%2F%2Fclassroom.google.com%2Fu%2F0%2Fh&followup=https%3A%2F%2Fclassroom.google.com%2Fu%2F0%2Fh&flowName=GlifWebSignIn&flowEntry=ServiceLogin")
+        print("Login with your school account then come back to this program and press enter to proceed")
+        input(": ")
+        clr()
+
+    def start(self):
+        self.time_table = TimeTable().get_time_table(self.user_dict['user_table'])
+
+    def session(self):
+        period_dict = self.user_dict['user_periods']
+        subject_dict = self.user_dict['user_subjects']
+        periods = [k for k in period_dict.keys()]
+        for period in periods:
+            clr()
+            ctime = time.ctime().split(" ")[3]
+            cminutes = self.get_minutes(ctime)
+            print(f"The current time is {ctime}")
+            print(f"Preparing to join {self.time_table[period]} which will end at {period_dict[period]}")
+            endtime = self.get_minutes(period_dict[period])
+            if cminutes > endtime: print("This session is already over"); continue
+            self.driver.get(subject_dict[self.time_table[period]])
+            time.sleep(5)
+            joined = self.attempt_join()
+            while not joined and cminutes < endtime:
+                joined = self.attempt_join()
+                if not joined: continue
+                if joined == "strange_error":
+                    self.driver.get(subject_dict[self.time_table[period]])
+                    joined = self.attempt_join()
+
+            if cminutes > endtime: print("Class is over"); continue
+            print(f"Joined {self.time_table[period]}")
+            chat = self.driver.find_element_by_class_name("NPEfkd RveJvd snByac")
+            if chat:
+                chat.click()
+                pyautogui.typewrite(self.user_dict['msg'])
+                pyautogui.press("enter")
+            captions = self.driver.find_element_by_class_name("n8i9t")
+            if captions: captions.click()
+            while cminutes > endtime:
+                self.screen_check(self.time_table[period])
+                time.sleep(40)
+                cminutes = self.get_minutes(ctime)
+
+            print("Session Over")
+            time.sleep(2)
+            clr()
+            continue
+            
+    def attempt_join(self):
+        refresh = self.driver.find_element_by_class_name("VfPpkd-RLmnJb")
+        if refresh: refresh.click(); return False
+        time.sleep(5)
+        camera = self.driver.find_element_by_class_name("U26fgb JRY2Pb mUbCce kpROve uJNmj QmxbVb M9Bg4d HNeRed")
+        mic = self.driver.find_element_by_class_name("U26fgb JRY2Pb mUbCce kpROve uJNmj HNeRed QmxbVb")
+        join = self.driver.find_element_by_class_name("l4V7wb Fxmcue")
+        if not camera or not mic or not join: return "strange_error"
+        camera.click()
+        mic.click()
+        time.sleep(1)
+        join.click()
+        return True
+
+    def screen_check(self, current_class):
+        # Checks if someone is presenting 
+        if self.driver.find_element_by_class_name("z1gyye bGuvKd") or self.driver.find_element_by_class_name("TBMuR bj4p3b"):
+            if not os.path.exists(f"gmeetclass/screenshots/{current_class}"):os.mkdir(f"gmeetclass/screenshots/{current_class}")
+            # Searches the screenshots folder of the current class for all images
+            screenshots = [screenshot for screenshot in os.listdir(f"gmeetclass/screenshots/{current_class}") if screenshot.endswith(".png") and screenshot.startswith(current_class)]
+            if screenshots:
+                # Calles the get_last Function. All images will be saved with a number at the end of the subject's name
+                highest = self.get_last(screenshots) + 1
+            else:
+                # If no other screenshots with the same name as current subject exists, sets highest to 1 and names the new screenshot that.
+                highest = 1
+            pyautogui.screenshot(imageFilename=f"screenshots/{current_class}/{current_class}{highest}.png")
+            print("Screenshot taken")  
+
+    def get_last(self, itera):
+        # An empty list of numbers
+        numbers = []
+        for img in itera:
+            # Loops through the list of images in the screenshots folder looking for the numbers.
+            # In the format "physics32.png", splits name by the . and returns the 0 index, which in this case is "physics32"
+            numbers.append(int(re.findall(r"([0-9]+)", img.split(".")[0])[-1]))
+        # Sorts the numbers then sends the highest one.
+        return sorted(numbers)[-1]
+
+    def get_minutes(self, value):
+        time = value.split(":")
+        hours, minutes = int(time[0]), int(time[1])
+        return (hours * 60) + minutes
+
 
 class TimeTable:
-    def __init__(self, periods, subjects):
+    def __init__(self, periods=None, subjects=None):
         self.period_dict = periods
         self.subject_dict = subjects
         self.dotw = {"Mon": "Monday", "Tue": "Tuesday", "Wed": "Wednesday", "Thu": "Thursday", "Fri": "Friday"}
 
     def make_time_table(self):
-        periods = [int(k) for k in self.period_dict.keys()]
-        subjects = [for k in self.subject_dict.keys()]
+        periods = [k for k in self.period_dict.keys()]
+        subjects = [k for k in self.subject_dict.keys()]
         table_dict = {}
         for day in self.dotw.values():
             table_dict[day] = {}
@@ -31,7 +141,7 @@ class TimeTable:
                 print(f"What subject do you have at session/period {period} on a {day}?")
                 sub = input(": ").capitalize()
                 while not sub in subjects:
-                    print(f"Strange... That subject in your subject lineup. Delete the userdata folder at {os.cwd()}\\gmeetclass and then restart the program to make changes.")
+                    print(f"Strange... That subject in your subject lineup. Delete the userdata folder at {os.getcwd()}\\gmeetclass and then restart the program to make changes.")
                     sub = input(": ").capitalize()
                 
                 table_dict[day][period] = sub
@@ -42,14 +152,23 @@ class TimeTable:
 
         return table_dict
 
+    def get_time_table(self, table_dict):
+        day = time.ctime().split(" ")[0]
+        print(f"Getting your time table for {self.dotw[day]}")
+        print(table_dict[day])
+        print("Completed")
+        time.sleep(2)
+        return table_dict[day]
+        
+
 class Subjects:
     def __init__(self, count):
         self.count = count
 
-    def get_subjects(self, sub_count):
+    def get_subjects(self):
         my_dict = {}
         print("Enter the name for a subject that you do?")
-        for _ in range(sub_count):
+        for _ in range(self.count):
             subject_name = input(": ").capitalize()
             print("What is the lookup google meet link for this class?")
             print("I recommend getting the link from the header in your google classroom that looks like https://meet.google.com/lookup/some_code.")
@@ -117,9 +236,11 @@ class Setup:
         period_dict = Period(period_count).timings()
         subject_dict = Subjects(sub_count).get_subjects()
         table_dict = TimeTable(period_dict, subject_dict).make_time_table()
+        print("What message should I send when Joining a google meet?")
+        msg = input(": ")
         os.rename("chromedriver.exe", "./gmeetclass/chromedriver.exe")
         os.mkdir("./gmeetclass/userdata")
-        user_dict = {"user_periods": period_dict, "user_subjects": subject_dict, "user_table": table_dict}
+        user_dict = {"user_periods": period_dict, "user_subjects": subject_dict, "user_table": table_dict, "msg": msg}
         with open("gmeetclass/userdata/userdata.json", "w") as f:
             json.dump(user_dict, f, indent=4)
 
@@ -127,9 +248,16 @@ if not os.path.exists("./gmeetclass"): Setup().setup()
 if not os.path.exists("./gmeetclass/userdata"): Setup().userdata()
 with open("userdata.json") as f:
     try:
-        data = json.load(f)
+        user_dict = json.load(f)
     except json.JSONDecodeError:
         print("Something went wrong with your data... Please Relaunch the program")
         os.rmdir("./gmeetclass/userdata")
         time.sleep(3)
         raise SystemExit
+
+clr()
+session = Gmeetclass(user_dict)
+session.setup()
+session.login()
+session.start()
+session.session()
