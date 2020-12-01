@@ -21,7 +21,9 @@ Simply double tap the file.
 
 Open your cmd and navigate to the folder where the gmeet.py file is, and simply run the command "python gmeet.py" (windows) or your os equivalent.
 
+## Extra Notes:
+
+When setting up your time table, note that everysubject must have a google meet link. Therefore, take into account stuff like registration, lunch and non-contact periods if viable. For the non-contact / lunch periods, I don't have any special functionality, so just put in any of your other subjects as a place holder.
 
 ## Requirements
-Needs the folder named gmeetclass which contains important files.
-Check requirements.txt
+Check requirements.txt (For developers)

@@ -136,7 +136,7 @@ class TimeTable:
         table_dict = {}
         for day in self.dotw.values():
             table_dict[day] = {}
-            print("Your Subjects are {subjects}")
+            print(f"Your Subjects are {subjects}")
             for period in periods:
                 print(f"What subject do you have at session/period {period} on a {day}?")
                 sub = input(": ").capitalize()
@@ -238,7 +238,7 @@ class Setup:
         table_dict = TimeTable(period_dict, subject_dict).make_time_table()
         print("What message should I send when Joining a google meet?")
         msg = input(": ")
-        os.rename("chromedriver.exe", "./gmeetclass/chromedriver.exe")
+        if os.path.exists("chromedriver.exe"): os.rename("chromedriver.exe", "./gmeetclass/chromedriver.exe")
         os.mkdir("./gmeetclass/userdata")
         user_dict = {"user_periods": period_dict, "user_subjects": subject_dict, "user_table": table_dict, "msg": msg}
         with open("gmeetclass/userdata/userdata.json", "w") as f:
@@ -246,14 +246,22 @@ class Setup:
 
 if not os.path.exists("./gmeetclass"): Setup().setup()
 if not os.path.exists("./gmeetclass/userdata"): Setup().userdata()
-with open("userdata.json") as f:
+with open("./gmeetclass/userdata/userdata.json") as f:
     try:
         user_dict = json.load(f)
     except json.JSONDecodeError:
         print("Something went wrong with your data... Please Relaunch the program")
+        os.remove("./gmeetclass/userdata/userdata.json")
         os.rmdir("./gmeetclass/userdata")
         time.sleep(3)
         raise SystemExit
+    except FileNotFoundError:
+        print("Something went wrong with your data... Please Relaunch the program")
+        os.remove("./gmeetclass/userdata/userdata.json")
+        time.sleep(3)
+        raise SystemExit
+
+
 
 clr()
 session = Gmeetclass(user_dict)
