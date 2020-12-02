@@ -1,7 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-import selenium
-import time, os, json, re
+from selenium.common import exceptions
+import time, os, json, re, pyautogui
 
 # try:
 #     driver = webdriver.Chrome("gmeetclass/chromedriver.exe")
@@ -41,7 +41,7 @@ class Gmeetclass:
         try:
             self.driver = webdriver.Chrome("gmeetclass/chromedriver.exe")
             print("Driver Connected")
-        except selenium.common.exceptions.WebDriverException:
+        except exceptions.WebDriverException:
             print("Could not find chromedriver.exe. Makesure it is in the gmeetclass folder")
             input(": ")
             raise SystemExit
@@ -86,25 +86,30 @@ class Gmeetclass:
             self.driver.get(subject_dict[self.time_table[period]])
             time.sleep(5)
             joined = self.attempt_join()
+            print("Attempting to join")
             while not joined and cminutes < endtime:
                 joined = self.attempt_join()
                 cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
-                if not joined: continue
+                if not joined: print("Something went wrong... trying again"); continue
                 if joined == "strange_error":
+                    print("Strange Error")
                     self.driver.get(subject_dict[self.time_table[period]])
                     joined = self.attempt_join()
                     cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
-
+                clr()
             if cminutes > endtime: print("Class is over"); continue
             print(f"Joined {self.time_table[period]}")
-            chat = self.driver.find_element_by_class_name("NPEfkd RveJvd snByac")
-            if chat:
-                chat.click()
-                chat.clear()
-                chat.sendkeys(self.user_dict['join_message'])
-                chat.sendkeys(Keys.ENTER)
-            captions = self.driver.find_element_by_class_name("n8i9t")
-            if captions: captions.click()
+
+            captions = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783729480349909012/unknown.png", confidence=0.8)
+            if captions:
+                captions.click()
+            chat = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783708879040806922/chat.png", confidence=0.7)
+            
+            if chat: 
+                pyautogui.click(chat)
+                pyautogui.typewrite(self.user_dict['join_message'])
+                pyautogui.press("enter")
+
             while cminutes > endtime:
                 self.screen_check(self.time_table[period])
                 time.sleep(40)
@@ -115,19 +120,29 @@ class Gmeetclass:
             clr()
             continue
 
+        print("Bye bye")
+        self.driver.close()
+
     def attempt_join(self):
-        refresh = self.driver.find_element_by_class_name("VfPpkd-RLmnJb")
-        if refresh: refresh.click(); return False
+        refresh = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783708887638736987/reload.png", confidence=0.8)
+        if refresh: pyautogui.click(refresh); return False
+        print("We're almost there")
+        time.sleep(10)
+        dismiss = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783708880588374016/dismiss.png", confidence=0.7)
+        if dismiss: pyautogui.click(dismiss)
+        block = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783726777717096468/unknown.png", confidence=0.8)
+        if block: pyautogui.click(block)
         time.sleep(5)
-        camera = self.driver.find_element_by_class_name("U26fgb JRY2Pb mUbCce kpROve uJNmj QmxbVb M9Bg4d HNeRed")
-        mic = self.driver.find_element_by_class_name("U26fgb JRY2Pb mUbCce kpROve uJNmj HNeRed QmxbVb")
-        join = self.driver.find_element_by_class_name("l4V7wb Fxmcue")
-        if not camera or not mic or not join: return "strange_error"
-        camera.click(); mic.click(); time.sleep(1); join.click()
-        return True
+        join = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783708881557651506/join.png", confidence=0.8)
+        if join: 
+            pyautogui.click(join)
+            return True
+        else: 
+            print("Could not find Join Button")
+            return "strange_error" 
 
     def screen_check(self, current_class):
-        if self.driver.find_element_by_class_name("z1gyye bGuvKd") or self.driver.find_element_by_class_name("TBMuR bj4p3b"):
+        if pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783708884585283604/presenting.png", confidence=0.8):
             if not os.path.exists(f"gmeetclass/screenshots/{current_class}"):os.mkdir(f"gmeetclass/screenshots/{current_class}")
             screenshots = [screenshot for screenshot in os.listdir(f"gmeetclass/screenshots/{current_class}") if screenshot.endswith(".png") and screenshot.startswith(current_class)]
             if screenshots:
@@ -135,7 +150,7 @@ class Gmeetclass:
             else:
                 highest = 1
             self.driver.save_screenshot(f"screenshots/{current_class}/{current_class}{highest}.png")
-            print("Screenshot taken")  
+            print("Screenshot taken") 
 
     def get_last(self, itera):
         numbers = []
