@@ -45,13 +45,16 @@ class Gmeetclass:
             print("Could not find chromedriver.exe. Makesure it is in the gmeetclass folder")
             input(": ")
             raise SystemExit
-        else:
-            print("Your browser may need to be updated.")
+
+        except Exception as err:
+            print(err)
             input(": ")
             raise SystemExit
+
         clr()
     
     def login(self):
+        print("Loading login page.")
         self.driver.get("https://accounts.google.com/signin/v2/identifier?service=classroom&passive=1209600&continue=https%3A%2F%2Fclassroom.google.com%2Fu%2F0%2Fh&followup=https%3A%2F%2Fclassroom.google.com%2Fu%2F0%2Fh&flowName=GlifWebSignIn&flowEntry=ServiceLogin")
         print("Login with your school account then come back to this program and press enter to proceed")
         input(": ")
@@ -64,9 +67,17 @@ class Gmeetclass:
         period_dict = self.user_dict['user_periods']
         subject_dict = self.user_dict['user_subjects']
         periods = [k for k in period_dict.keys()]
+        start_minutes = self.get_minutes(self.user_dict['start_time'])
+        print(f"Waiting until {self.user_dict['start_time']} to begin {self.time_table['0']}.")
+        cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
+        while cminutes < start_minutes:
+            print(f"{int(cminutes) - int(start_minutes)} minutes remain before I begin.")
+            time.sleep(40)
+            cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
+
         for period in periods:
             clr()
-            ctime = time.ctime().split(" ")[3]
+            ctime = re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0]
             cminutes = self.get_minutes(ctime)
             print(f"The current time is {ctime}")
             print(f"Preparing to join {self.time_table[period]} which will end at {period_dict[period]}")
@@ -77,10 +88,12 @@ class Gmeetclass:
             joined = self.attempt_join()
             while not joined and cminutes < endtime:
                 joined = self.attempt_join()
+                cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
                 if not joined: continue
                 if joined == "strange_error":
                     self.driver.get(subject_dict[self.time_table[period]])
                     joined = self.attempt_join()
+                    cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
 
             if cminutes > endtime: print("Class is over"); continue
             print(f"Joined {self.time_table[period]}")
@@ -95,13 +108,13 @@ class Gmeetclass:
             while cminutes > endtime:
                 self.screen_check(self.time_table[period])
                 time.sleep(40)
-                cminutes = self.get_minutes(ctime)
+                cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
 
             print("Session Over")
             time.sleep(2)
             clr()
             continue
-            
+
     def attempt_join(self):
         refresh = self.driver.find_element_by_class_name("VfPpkd-RLmnJb")
         if refresh: refresh.click(); return False
@@ -169,10 +182,10 @@ class TimeTable:
     def get_time_table(self, table_dict):
         day = time.ctime().split(" ")[0]
         print(f"Getting your time table for {self.dotw[day]}")
-        print(table_dict[day])
+        print(table_dict[self.dotw[day]])
         print("Completed")
         time.sleep(2)
-        return table_dict[day]
+        return table_dict[self.dotw[day]]
         
 
 class Subjects:
@@ -228,11 +241,12 @@ class Period:
         else: return my_dict
 
 class Setup:
-    def __init__(self, period_dict=None, subject_dict=None, table_dict=None, join_message=None):
+    def __init__(self, period_dict=None, subject_dict=None, table_dict=None, join_message=None, start_time=None):
         self.period_dict = period_dict
         self.subject_dict = subject_dict
         self.table_dict = table_dict
         self.join_message = join_message
+        self.start_time = start_time
 
 
     def setup(self): 
@@ -246,10 +260,20 @@ class Setup:
         if user_dict: user_dict['join_message'] = join_message; return user_dict
         return join_message
 
+    def set_start_time(self, user_dict=None):
+        print("What time does your first period/session begin?")
+        etime = input(": ")
+        while not re.match(r"[0-9][0-9]:[0-9][0-9]", etime):
+            print("That does not match the format of '00:00'")
+            etime = input(": ")
+
+        if not user_dict: user_dict = {}
+        user_dict['start_time'] = etime; return user_dict
+
 
     def userdata(self):
         if not os.path.exists("./gmeetclass/userdata"): os.mkdir("./gmeetclass/userdata")
-        user_dict = {"user_periods": self.period_dict, "user_subjects": self.subject_dict, "user_table": self.table_dict, "join_message": self.join_message}
+        user_dict = {"user_periods": self.period_dict, "user_subjects": self.subject_dict, "user_table": self.table_dict, "join_message": self.join_message, "start_time": self.start_time}
         with open("gmeetclass/userdata/userdata.json", "w") as f:
             json.dump(user_dict, f, indent=4)
 
@@ -260,7 +284,8 @@ if not os.path.exists("./gmeetclass/userdata"):
     subject_dict = Subjects().set_subjects()
     table_dict = TimeTable(period_dict, subject_dict).make_time_table()
     join_message = Setup().set_msg()
-    Setup(period_dict, subject_dict, table_dict, join_message).userdata()
+    start_time = Setup().set_start_time()
+    Setup(period_dict, subject_dict, table_dict, join_message, start_time).userdata()
 
 with open("./gmeetclass/userdata/userdata.json") as f:
     try:
@@ -283,37 +308,45 @@ def showdict(dicti):
         print(f"{k}: {v}")
     print()
 
-print("Subjects:")
-showdict(user_dict['user_subjects'])
-print("Periods / Sessions:")
-showdict(user_dict['user_periods'])
-print("Time Table:")
-for k in user_dict['user_table'].keys():
-    print(f"{k}:")
-    showdict(user_dict['user_table'][k])
-print("Join Message:")
-print(user_dict['join_message'])
-print()
+def showinfo():
+    print("Subjects:")
+    showdict(user_dict['user_subjects'])
+    print("Periods / Sessions:")
+    showdict(user_dict['user_periods'])
+    print("Time Table:")
+    for k in user_dict['user_table'].keys():
+        print(f"{k}:")
+        showdict(user_dict['user_table'][k])
+    print("Join Message:")
+    print(user_dict['join_message'])
+    print()
+    print("Start Time:")
+    print(user_dict['start_time'])
+    print()
+
+showinfo()
 
 print("Is there anything here you wish to change? (y/n)")
 change = input(": ")
 if change.lower().startswith("y"):
     def changing(my_dict):
-        print("What would you like to change? Type 'nvm' to exit without changing anything.")
-        print("Options to change: 'user_subjects', 'user_periods', 'user_table', 'join_message'")
-        change = input(": ")
-        if change.lower() == "nvm": return None
-        elif change.lower() == "user_subjects": to_return = Subjects().set_subjects(my_dict); return to_return
-        elif change.lower() == "user_periods": to_return = Period().set_periods(my_dict); return to_return
-        elif change.lower() == "user_table": to_return = TimeTable().make_time_table(my_dict); return to_return
-        elif change.lower() == "join_message": to_return = Setup().set_msg(my_dict); return to_return 
-        else: print("I do not recognise that value."); return None
-    value = changing(user_dict)
-    if value:
-        user_dict = value
-        with open("gmeetclass/userdata/userdata.json", "w") as f:
-            json.dump(user_dict, f, indent=4)
-        print("Updated Successfully")
+        while True:
+            print("What would you like to change? Type 'nvm' to exit.")
+            print("Options to change: 'user_subjects', 'user_periods', 'user_table', 'join_message', 'start_time'")
+            change = input(": ")
+            if change.lower() == "nvm": return my_dict
+            elif change.lower() == "user_subjects": Subjects().set_subjects(my_dict)
+            elif change.lower() == "user_periods": Period().set_periods(my_dict)
+            elif change.lower() == "user_table": TimeTable(my_dict['user_periods'], my_dict['user_subjects']).make_time_table(my_dict)
+            elif change.lower() == "join_message": Setup().set_msg(my_dict)
+            elif change.lower() == "start_time": Setup().set_start_time(my_dict)
+            else: print("I do not recognise that value.")
+            clr()
+            showinfo()
+    user_dict = changing(user_dict)
+    with open("gmeetclass/userdata/userdata.json", "w") as f:
+        json.dump(user_dict, f, indent=4)
+    print("Updated Successfully")
 
     
 else: print("Moving on smartly")
