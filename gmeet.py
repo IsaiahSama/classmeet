@@ -1,6 +1,7 @@
 from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 import selenium
-import pyautogui, time, os, json, re
+import time, os, json, re
 
 # try:
 #     driver = webdriver.Chrome("gmeetclass/chromedriver.exe")
@@ -86,8 +87,9 @@ class Gmeetclass:
             chat = self.driver.find_element_by_class_name("NPEfkd RveJvd snByac")
             if chat:
                 chat.click()
-                pyautogui.typewrite(self.user_dict['join_message'])
-                pyautogui.press("enter")
+                chat.clear()
+                chat.sendkeys(self.user_dict['join_message'])
+                chat.sendkeys(Keys.ENTER)
             captions = self.driver.find_element_by_class_name("n8i9t")
             if captions: captions.click()
             while cminutes > endtime:
