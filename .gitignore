@@ -2,5 +2,5 @@ pyvenv.cfg
 Include/
 Lib/
 Scripts/
-gmeetclass/
+gmeetclass/userdata/
 debug.log

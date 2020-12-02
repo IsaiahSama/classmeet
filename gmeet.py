@@ -100,17 +100,17 @@ class Gmeetclass:
             if cminutes > endtime: print("Class is over"); continue
             print(f"Joined {self.time_table[period]}")
 
-            captions = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783729480349909012/unknown.png", confidence=0.8)
+            captions = pyautogui.locateOnScreen("gmeetclass/images/captions.png", confidence=0.8)
             if captions:
                 captions.click()
-            chat = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783708879040806922/chat.png", confidence=0.7)
+            chat = pyautogui.locateOnScreen("gmeetclass/images/chat.png", confidence=0.7)
             
             if chat: 
                 pyautogui.click(chat)
                 pyautogui.typewrite(self.user_dict['join_message'])
                 pyautogui.press("enter")
 
-            while cminutes > endtime:
+            while cminutes < endtime:
                 self.screen_check(self.time_table[period])
                 time.sleep(40)
                 cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
@@ -124,16 +124,16 @@ class Gmeetclass:
         self.driver.close()
 
     def attempt_join(self):
-        refresh = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783708887638736987/reload.png", confidence=0.8)
+        refresh = pyautogui.locateOnScreen("gmeetclass/images/reload.png", confidence=0.8)
         if refresh: pyautogui.click(refresh); return False
         print("We're almost there")
         time.sleep(10)
-        dismiss = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783708880588374016/dismiss.png", confidence=0.7)
+        dismiss = pyautogui.locateOnScreen("gmeetclass/images/dismiss.png", confidence=0.7)
         if dismiss: pyautogui.click(dismiss)
-        block = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783726777717096468/unknown.png", confidence=0.8)
+        block = pyautogui.locateOnScreen("gmeetclass/images/block.png", confidence=0.8)
         if block: pyautogui.click(block)
         time.sleep(5)
-        join = pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783708881557651506/join.png", confidence=0.8)
+        join = pyautogui.locateOnScreen("gmeetclass/images/join.png", confidence=0.8)
         if join: 
             pyautogui.click(join)
             return True
@@ -142,7 +142,7 @@ class Gmeetclass:
             return "strange_error" 
 
     def screen_check(self, current_class):
-        if pyautogui.locateOnScreen("https://media.discordapp.net/attachments/783708646092832778/783708884585283604/presenting.png", confidence=0.8):
+        if pyautogui.locateOnScreen("gmeetclass/images/presenting.png", confidence=0.8):
             if not os.path.exists(f"gmeetclass/screenshots/{current_class}"):os.mkdir(f"gmeetclass/screenshots/{current_class}")
             screenshots = [screenshot for screenshot in os.listdir(f"gmeetclass/screenshots/{current_class}") if screenshot.endswith(".png") and screenshot.startswith(current_class)]
             if screenshots:
@@ -292,7 +292,8 @@ class Setup:
         with open("gmeetclass/userdata/userdata.json", "w") as f:
             json.dump(user_dict, f, indent=4)
 
-if not os.path.exists("./gmeetclass"): Setup().setup()
+if not os.path.exists("./gmeetclass"): print("Please download the gmeetclass folder."); input(": "); raise SystemExit
+if not os.path.exists("chromedriver.exe"): print("Please download the chromedriver.exe file."); input(": "); raise SystemExit
 
 if not os.path.exists("./gmeetclass/userdata"): 
     period_dict = Period().set_periods()
