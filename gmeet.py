@@ -13,6 +13,22 @@ import pyautogui, time, os, json, re
 
 def clr(): os.system("CLS")
 
+def get_counts(counting, highest):
+        print(f"How many {counting}?")
+        amount = input(": ")
+        while True:
+            try:
+                amount = int(amount)
+                if amount < 1 or amount > highest:
+                    print(f"Value must be more than 0 and less than {highest}... please?")
+                    raise ValueError
+                break
+            except ValueError:
+                print("Come now... Give me a proper, logical number.")
+                amount = input(": ")
+        
+        clr()
+        return amount
 
 class Gmeetclass:
     def __init__(self, user_dict, driver=None, time_table=None):
@@ -29,7 +45,7 @@ class Gmeetclass:
             input(": ")
             raise SystemExit
         else:
-            print("Your browser needs to be updated.")
+            print("Your browser may need to be updated.")
             input(": ")
             raise SystemExit
         clr()
@@ -70,7 +86,7 @@ class Gmeetclass:
             chat = self.driver.find_element_by_class_name("NPEfkd RveJvd snByac")
             if chat:
                 chat.click()
-                pyautogui.typewrite(self.user_dict['msg'])
+                pyautogui.typewrite(self.user_dict['join_message'])
                 pyautogui.press("enter")
             captions = self.driver.find_element_by_class_name("n8i9t")
             if captions: captions.click()
@@ -124,10 +140,11 @@ class TimeTable:
         self.subject_dict = subjects
         self.dotw = {"Mon": "Monday", "Tue": "Tuesday", "Wed": "Wednesday", "Thu": "Thursday", "Fri": "Friday"}
 
-    def make_time_table(self):
+    def make_time_table(self, user_dict=None):
         periods = [k for k in self.period_dict.keys()]
         subjects = [k for k in self.subject_dict.keys()]
-        table_dict = {}
+        if not user_dict: table_dict = {}
+        else: table_dict = user_dict['user_table']
         for day in self.dotw.values():
             table_dict[day] = {}
             print(f"Your Subjects are {subjects}")
@@ -144,7 +161,8 @@ class TimeTable:
             time.sleep(2)
             clr()
 
-        return table_dict
+        if user_dict: return user_dict
+        else: return table_dict
 
     def get_time_table(self, table_dict):
         day = time.ctime().split(" ")[0]
@@ -156,13 +174,15 @@ class TimeTable:
         
 
 class Subjects:
-    def __init__(self, count):
-        self.count = count
+    def __init__(self):
+        pass
 
-    def get_subjects(self):
-        my_dict = {}
+    def set_subjects(self, user_dict=None):
+        count = get_counts("subjects do you do", 15)
+        if not user_dict: my_dict = {}
+        else: my_dict = user_dict['user_subjects']
         print("Enter the name for a subject that you do?")
-        for _ in range(self.count):
+        for _ in range(count):
             subject_name = input(": ").capitalize()
             print("What is the lookup google meet link for this class?")
             print("I recommend getting the link from the header in your google classroom that looks like https://meet.google.com/lookup/some_code.")
@@ -175,18 +195,22 @@ class Subjects:
             print("Enter your next Subject name")
 
         clr()
-        return my_dict
+        if user_dict: return user_dict
+        else: return my_dict
     
 
 class Period:
-    def __init__(self, count):
-        self.count = count
+    def __init__(self):
+        pass
 
-    def timings(self):
+    def set_periods(self, user_dict=None):
+        count = get_counts("periods/sessions do you have in a day", 10)
         print("Note: Time must be given in 24 hour format, so 1:00pm is 13:00")
         print("Therefore time will be entered in the format of 'hours:minutes' (09:20) for example.")
-        my_dict = {}
-        for num in range(self.count):
+        
+        if not user_dict: my_dict = {}
+        else: my_dict = user_dict['user_periods']
+        for num in range(count):
             print(f"What time does period {num} end?")
             etime = input(": ")
             while not re.match(r"[0-9][0-9]:[0-9][0-9]", etime):
@@ -198,48 +222,44 @@ class Period:
         print("Completed.")
         time.sleep(2)
         clr()
-        return my_dict
+        if user_dict: return user_dict
+        else: return my_dict
 
 class Setup:
-    def __init__(self):
-        pass
+    def __init__(self, period_dict=None, subject_dict=None, table_dict=None, join_message=None):
+        self.period_dict = period_dict
+        self.subject_dict = subject_dict
+        self.table_dict = table_dict
+        self.join_message = join_message
 
-    def setup(self): os.mkdir("gmeetclass")
-        
 
-    def get_counts(self, counting, highest):
-        print(f"How many {counting}?")
-        amount = input(": ")
-        while True:
-            try:
-                amount = int(amount)
-                if amount < 1 or amount > highest:
-                    print(f"Value must be more than 0 and less than {highest}... please?")
-                    raise ValueError
-                break
-            except ValueError:
-                print("Come now... Give me a proper, logical number.")
-                amount = input(": ")
-        
-        clr()
-        return amount
+    def setup(self): 
+        os.mkdir("gmeetclass")
+        if os.path.exists("chromedriver.exe"): os.rename("chromedriver.exe", "./gmeetclass/chromedriver.exe")
+
+
+    def set_msg(self, user_dict=None):
+        print("What message should I send when Joining a google meet?")
+        join_message = input(": ")
+        if user_dict: user_dict['join_message'] = join_message; return user_dict
+        return join_message
+
 
     def userdata(self):
-        period_count = self.get_counts("periods/sessions do you have in a day", 10)
-        sub_count = self.get_counts("subjects do you do", 15)
-        period_dict = Period(period_count).timings()
-        subject_dict = Subjects(sub_count).get_subjects()
-        table_dict = TimeTable(period_dict, subject_dict).make_time_table()
-        print("What message should I send when Joining a google meet?")
-        msg = input(": ")
-        if os.path.exists("chromedriver.exe"): os.rename("chromedriver.exe", "./gmeetclass/chromedriver.exe")
-        os.mkdir("./gmeetclass/userdata")
-        user_dict = {"user_periods": period_dict, "user_subjects": subject_dict, "user_table": table_dict, "msg": msg}
+        if not os.path.exists("./gmeetclass/userdata"): os.mkdir("./gmeetclass/userdata")
+        user_dict = {"user_periods": self.period_dict, "user_subjects": self.subject_dict, "user_table": self.table_dict, "join_message": self.join_message}
         with open("gmeetclass/userdata/userdata.json", "w") as f:
             json.dump(user_dict, f, indent=4)
 
 if not os.path.exists("./gmeetclass"): Setup().setup()
-if not os.path.exists("./gmeetclass/userdata"): Setup().userdata()
+
+if not os.path.exists("./gmeetclass/userdata"): 
+    period_dict = Period().set_periods()
+    subject_dict = Subjects().set_subjects()
+    table_dict = TimeTable(period_dict, subject_dict).make_time_table()
+    join_message = Setup().set_msg()
+    Setup(period_dict, subject_dict, table_dict, join_message).userdata()
+
 with open("./gmeetclass/userdata/userdata.json") as f:
     try:
         user_dict = json.load(f)
@@ -255,9 +275,49 @@ with open("./gmeetclass/userdata/userdata.json") as f:
         time.sleep(3)
         raise SystemExit
 
+clr()
+def showdict(dicti):
+    for k, v in dicti.items():
+        print(f"{k}: {v}")
+    print()
 
+print("Subjects:")
+showdict(user_dict['user_subjects'])
+print("Periods / Sessions:")
+showdict(user_dict['user_periods'])
+print("Time Table:")
+for k in user_dict['user_table'].keys():
+    print(f"{k}:")
+    showdict(user_dict['user_table'][k])
+print("Join Message:")
+print(user_dict['join_message'])
+print()
+
+print("Is there anything here you wish to change? (y/n)")
+change = input(": ")
+if change.lower().startswith("y"):
+    def changing(my_dict):
+        print("What would you like to change? Type 'nvm' to exit without changing anything.")
+        print("Options to change: 'user_subjects', 'user_periods', 'user_table', 'join_message'")
+        change = input(": ")
+        if change.lower() == "nvm": return None
+        elif change.lower() == "user_subjects": to_return = Subjects().set_subjects(my_dict); return to_return
+        elif change.lower() == "user_periods": to_return = Period().set_periods(my_dict); return to_return
+        elif change.lower() == "user_table": to_return = TimeTable().make_time_table(my_dict); return to_return
+        elif change.lower() == "join_message": to_return = Setup().set_msg(my_dict); return to_return 
+        else: print("I do not recognise that value."); return None
+    value = changing(user_dict)
+    if value:
+        user_dict = value
+        with open("gmeetclass/userdata/userdata.json", "w") as f:
+            json.dump(user_dict, f, indent=4)
+        print("Updated Successfully")
+
+    
+else: print("Moving on smartly")
 
 clr()
+
 session = Gmeetclass(user_dict)
 session.setup()
 session.login()
