@@ -90,29 +90,35 @@ class Gmeetclass:
             while not joined and cminutes < endtime:
                 joined = self.attempt_join()
                 cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
-                if not joined: print("Something went wrong... trying again"); continue
-                if joined == "strange_error":
-                    print("Strange Error")
+                if not joined: 
+                    print("Something went wrong... trying again")
                     self.driver.get(subject_dict[self.time_table[period]])
                     joined = self.attempt_join()
                     cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
+                    if cminutes < endtime: break
+                    continue
                 clr()
             if cminutes > endtime: print("Class is over"); continue
             print(f"Joined {self.time_table[period]}")
 
-            captions = pyautogui.locateOnScreen("gmeetclass/images/captions.png", confidence=0.8)
-            if captions:
-                captions.click()
+            
             chat = pyautogui.locateOnScreen("gmeetclass/images/chat.png", confidence=0.7)
             
             if chat: 
+                pyautogui.moveTo(chat)
+                captions = pyautogui.locateOnScreen("gmeetclass/images/captions.png", confidence=0.8)
+                while not captions:
+                    pyautogui.moveTo(chat)
+                    captions = pyautogui.locateOnScreen("gmeetclass/images/captions.png", confidence=0.8)
+                    if not captions: continue
+                    captions.click()
                 pyautogui.click(chat)
                 pyautogui.typewrite(self.user_dict['join_message'])
                 pyautogui.press("enter")
 
             while cminutes < endtime:
                 self.screen_check(self.time_table[period])
-                time.sleep(40)
+                time.sleep(10)
                 cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
 
             print("Session Over")
@@ -125,7 +131,7 @@ class Gmeetclass:
 
     def attempt_join(self):
         refresh = pyautogui.locateOnScreen("gmeetclass/images/reload.png", confidence=0.8)
-        if refresh: pyautogui.click(refresh); return False
+        if refresh: return False
         print("We're almost there")
         time.sleep(10)
         dismiss = pyautogui.locateOnScreen("gmeetclass/images/dismiss.png", confidence=0.7)
@@ -139,10 +145,11 @@ class Gmeetclass:
             return True
         else: 
             print("Could not find Join Button")
-            return "strange_error" 
+            return False
 
     def screen_check(self, current_class):
         if pyautogui.locateOnScreen("gmeetclass/images/presenting.png", confidence=0.8):
+            if not os.path.exists("gmeetclass/screenshots"): os.mkdir("gmeetclass/screenshots")
             if not os.path.exists(f"gmeetclass/screenshots/{current_class}"):os.mkdir(f"gmeetclass/screenshots/{current_class}")
             screenshots = [screenshot for screenshot in os.listdir(f"gmeetclass/screenshots/{current_class}") if screenshot.endswith(".png") and screenshot.startswith(current_class)]
             if screenshots:
