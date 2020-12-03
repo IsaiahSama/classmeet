@@ -117,8 +117,8 @@ class Gmeetclass:
                 pyautogui.press("enter")
 
             while cminutes < endtime:
-                self.screen_check(self.time_table[period])
                 time.sleep(10)
+                self.screen_check(self.time_table[period])
                 cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
 
             print("Session Over")
@@ -148,16 +148,15 @@ class Gmeetclass:
             return False
 
     def screen_check(self, current_class):
-        if pyautogui.locateOnScreen("gmeetclass/images/presenting.png", confidence=0.8):
-            if not os.path.exists("gmeetclass/screenshots"): os.mkdir("gmeetclass/screenshots")
-            if not os.path.exists(f"gmeetclass/screenshots/{current_class}"):os.mkdir(f"gmeetclass/screenshots/{current_class}")
-            screenshots = [screenshot for screenshot in os.listdir(f"gmeetclass/screenshots/{current_class}") if screenshot.endswith(".png") and screenshot.startswith(current_class)]
-            if screenshots:
-                highest = self.get_last(screenshots) + 1
-            else:
-                highest = 1
-            self.driver.save_screenshot(f"screenshots/{current_class}/{current_class}{highest}.png")
-            print("Screenshot taken") 
+        if not os.path.exists("gmeetclass/screenshots"): os.mkdir("gmeetclass/screenshots")
+        if not os.path.exists(f"gmeetclass/screenshots/{current_class}"):os.mkdir(f"gmeetclass/screenshots/{current_class}")
+        screenshots = [screenshot for screenshot in os.listdir(f"gmeetclass/screenshots/{current_class}") if screenshot.endswith(".png") and screenshot.startswith(current_class)]
+        if screenshots:
+            highest = self.get_last(screenshots) + 1
+        else:
+            highest = 1
+        self.driver.save_screenshot(f"screenshots/{current_class}/{current_class}{highest}.png")
+        print("Screenshot taken") 
 
     def get_last(self, itera):
         numbers = []
