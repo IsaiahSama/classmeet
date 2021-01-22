@@ -1,3 +1,0 @@
-selenium
-pyautogui
-opencv-python

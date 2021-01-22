@@ -1,7 +1,3 @@
 {
-    "python.pythonPath": "Scripts\\python.exe",
-    "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true,
-    "python.linting.mypyEnabled": false,
-    "python.linting.flake8Enabled": false
+    "python.pythonPath": "venv\\Scripts\\python.exe"
 }

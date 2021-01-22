@@ -101,23 +101,33 @@ class Gmeetclass:
             if cminutes > endtime: print("Class is over"); continue
             print(f"Joined {self.time_table[period]}")
 
-            
+            time.sleep(15)
+            captions = pyautogui.locateOnScreen("gmeetclass/images/captions.png", confidence=0.8)
+            if captions: time.sleep(1); pyautogui.click(captions)
             chat = pyautogui.locateOnScreen("gmeetclass/images/chat.png", confidence=0.7)
             
             if chat: 
-                pyautogui.moveTo(chat)
+                left = chat.left - 300
+                top = chat.top + 400
+                pyautogui.moveTo(x=left, y=top)
                 captions = pyautogui.locateOnScreen("gmeetclass/images/captions.png", confidence=0.8)
-                while not captions:
+                while not captions and cminutes < endtime:
                     pyautogui.moveTo(chat)
                     captions = pyautogui.locateOnScreen("gmeetclass/images/captions.png", confidence=0.8)
+                    cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
                     if not captions: continue
-                    captions.click()
+                    time.sleep(1)
+                    pyautogui.click(captions)
+                    time.sleep(5)
+            chat = pyautogui.locateOnScreen("gmeetclass/images/chat.png", confidence=0.7)
+            if chat:
                 pyautogui.click(chat)
-                pyautogui.typewrite(self.user_dict['join_message'])
-                pyautogui.press("enter")
+            time.sleep(2)
+            pyautogui.typewrite(self.user_dict['join_message'])
+            pyautogui.press("enter")
 
             while cminutes < endtime:
-                time.sleep(10)
+                time.sleep(30)
                 self.screen_check(self.time_table[period])
                 cminutes = self.get_minutes(re.findall(r"[0-9][0-9]:[0-9][0-9]", time.ctime())[0])
 
@@ -138,8 +148,8 @@ class Gmeetclass:
         if dismiss: pyautogui.click(dismiss)
         block = pyautogui.locateOnScreen("gmeetclass/images/block.png", confidence=0.8)
         if block: pyautogui.click(block)
-        time.sleep(5)
-        join = pyautogui.locateOnScreen("gmeetclass/images/join.png", confidence=0.8)
+        time.sleep(4)
+        join = pyautogui.locateOnScreen("gmeetclass/images/join.png", confidence=0.9)
         if join: 
             pyautogui.click(join)
             return True
@@ -149,13 +159,17 @@ class Gmeetclass:
 
     def screen_check(self, current_class):
         if not os.path.exists("gmeetclass/screenshots"): os.mkdir("gmeetclass/screenshots")
-        if not os.path.exists(f"gmeetclass/screenshots/{current_class}"):os.mkdir(f"gmeetclass/screenshots/{current_class}")
-        screenshots = [screenshot for screenshot in os.listdir(f"gmeetclass/screenshots/{current_class}") if screenshot.endswith(".png") and screenshot.startswith(current_class)]
+        date = re.findall(r"(.+) [0-9][0-9]:", time.ctime())[0]
+        if not os.path.exists(f"gmeetclass/screenshots/{date}"): os.mkdir(f"gmeetclass/screenshots/{date}")
+        if not os.path.exists(f"gmeetclass/screenshots/{date}/{current_class}"):os.mkdir(f"gmeetclass/screenshots/{date}/{current_class}")
+        screenshots = [screenshot for screenshot in os.listdir(f"gmeetclass/screenshots/{date}/{current_class}") if screenshot.endswith(".png") and screenshot.startswith(current_class)]
         if screenshots:
             highest = self.get_last(screenshots) + 1
         else:
             highest = 1
-        self.driver.save_screenshot(f"screenshots/{current_class}/{current_class}{highest}.png")
+        try:
+            self.driver.save_screenshot(f"gmeetclass/screenshots/{date}/{current_class}/{current_class}{highest}.png")
+        except: pass
         print("Screenshot taken") 
 
     def get_last(self, itera):
@@ -309,20 +323,16 @@ if not os.path.exists("./gmeetclass/userdata"):
     start_time = Setup().set_start_time()
     Setup(period_dict, subject_dict, table_dict, join_message, start_time).userdata()
 
-with open("./gmeetclass/userdata/userdata.json") as f:
-    try:
+try:
+    with open("./gmeetclass/userdata/userdata.json") as f:
         user_dict = json.load(f)
-    except json.JSONDecodeError:
-        print("Something went wrong with your data... Please Relaunch the program")
+except:
+    print("Something went wrong with your data... Please Relaunch the program")
+    if os.path.exists("./gmeetclass/userdata/userdata.json"):
         os.remove("./gmeetclass/userdata/userdata.json")
-        os.rmdir("./gmeetclass/userdata")
-        time.sleep(3)
-        raise SystemExit
-    except FileNotFoundError:
-        print("Something went wrong with your data... Please Relaunch the program")
-        os.remove("./gmeetclass/userdata/userdata.json")
-        time.sleep(3)
-        raise SystemExit
+    os.rmdir("./gmeetclass/userdata")
+    time.sleep(3)
+    raise SystemExit
 
 clr()
 def showdict(dicti):
